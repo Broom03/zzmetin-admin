@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- 모바일 화면 크기에 맞게 자동 비율 조정 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>낚시도우미 인증 관리</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: '맑은 고딕', sans-serif;
+            background-color: #f4f6f9;
+            margin: 20px auto;
+            max-width: 1100px;
+            padding: 0 15px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 20px;
+        }
+        .fishing-config-box {
+            background: #eaf4fc;
+            border: 1px solid #b8daff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .control-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input, button {
+            padding: 9px 12px;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #2980b9; }
+        .btn-refresh { background-color: #2ecc71; }
+        .btn-refresh:hover { background-color: #27ae60; }
+        .btn-ban { background-color: #e74c3c; padding: 5px 8px; font-size: 12px; }
+        .btn-ban:hover { background-color: #c0392b; }
+        .btn-normal { background-color: #95a5a6; padding: 5px 8px; font-size: 12px; }
+        .btn-del { background-color: #34495e; padding: 5px 8px; font-size: 12px; }
+        .btn-slot-save { background-color: #8e44ad; padding: 5px 8px; font-size: 12px; }
+        .btn-slot-save:hover { background-color: #732d91; }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            width: 100%;
+            min-width: 700px;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover { background-color: #f8f9fa; }
+        .badge-del {
+            background-color: #e74c3c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .badge-ok {
+            background-color: #2ecc71;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        /* 드래그 앤 드롭 정렬 */
+        tr.draggable-row { cursor: grab; }
+        tr.draggable-row:active { cursor: grabbing; }
+        tr.dragging { opacity: 0.4; background-color: #e8f4f8; }
+        tr.drag-over { border-top: 2px solid #3498db; }
+
+        @media (max-width: 768px) {
+            body { margin: 15px auto; padding: 0 10px; }
+            .control-box, .fishing-config-box { flex-direction: column; align-items: stretch; }
+            .control-box input, .control-box button,
+            .fishing-config-box input, .fishing-config-box button {
+                width: 100% !important;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🎣 낚시도우미 인증 관리</h2>
+
+    <!-- 전체 기본 최대 창 수량 설정 (1~10, 기본값 2) -->
+    <div class="fishing-config-box">
+        <span style="font-weight:bold; color:#2c3e50;">🎣 전체 기본 최대 창 등록 수량 (1~10):</span>
+        <input type="number" id="globalMaxSlots" min="1" max="10" value="2" style="width: 75px; text-align: center; font-weight: bold;">
+        <button onclick="saveGlobalMaxSlots()">💾 기본 수량 저장</button>
+    </div>
+
+    <!-- 신규 유저 등록 패널 -->
+    <div class="control-box">
+        <input type="text" id="addName" placeholder="이름 (예: 집컴-1)">
+        <input type="text" id="addSerial" placeholder="고유번호 (F-NEW-...)">
+        <input type="number" id="addMaxSlots" min="1" max="10" placeholder="창수량(1~10)" style="width:115px;">
+        <button onclick="saveUser()">➕ 낚시 등록</button>
+        <button class="btn-refresh" onclick="loadUsers()">🔄 새로고침</button>
+    </div>
+
+    <!-- 유저 목록 테이블 -->
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 130px;">이름(사용자명)</th>
+                    <th>등록번호 (HWID)</th>
+                    <th style="width: 130px; text-align: center;">창수량 (1~10)</th>
+                    <th style="width: 70px; text-align: center;">버전</th>
+                    <th style="width: 80px; text-align: center;">구동</th>
+                    <th style="width: 90px; text-align: center;">상태</th>
+                    <th style="width: 150px; text-align: center;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                <tr><td colspan="7" style="text-align:center; padding: 20px;">데이터를 불러오는 중...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 낚시도우미 전용 파이어베이스 DB 주소
+        const BASE_URL = "https://zzmetin-fishing-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const DB_URL = `${BASE_URL}/users`;
+        const FISHING_CFG_URL = `${BASE_URL}/fishing_config`;
+        let draggedRow = null;
+
+        // 1. 전체 기본 창 수량 불러오기
+        async function loadGlobalMaxSlots() {
+            try {
+                const res = await fetch(`${FISHING_CFG_URL}/max_slots.json`);
+                const val = await res.json();
+                document.getElementById("globalMaxSlots").value = (val !== null && val !== undefined) ? val : 2;
+            } catch (err) {
+                console.error("기본 창 수량 로드 실패:", err);
+            }
+        }
+
+        // 2. 전체 기본 창 수량 저장 (1~10)
+        async function saveGlobalMaxSlots() {
+            const count = parseInt(document.getElementById("globalMaxSlots").value, 10);
+            if (isNaN(count) || count < 1 || count > 10) {
+                alert("1 ~ 10 사이의 숫자를 입력해주세요.");
+                return;
+            }
+            try {
+                await fetch(`${FISHING_CFG_URL}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "max_slots": count })
+                });
+                alert(`기본 최대 창 수량이 ${count}개로 저장되었습니다.`);
+            } catch (err) {
+                alert("저장 실패: " + err.message);
+            }
+        }
+
+        // 3. 특정 유저의 개별 창 수량 저장
+        async function saveUserMaxSlots(name) {
+            const inputEl = document.getElementById(`slotInput_${name}`);
+            if (!inputEl) return;
+            const raw = inputEl.value.trim();
+
+            let valToSave = "";
+            if (raw !== "") {
+                const num = parseInt(raw, 10);
+                if (isNaN(num) || num < 1 || num > 10) {
+                    alert("1 ~ 10 사이의 숫자를 입력하세요. (비워두면 기본 수량 적용)");
+                    return;
+                }
+                valToSave = num;
+            }
+
+            try {
+                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "최대창수": valToSave })
+                });
+                alert(`[${name}] 창 수량이 저장되었습니다.`);
+            } catch (err) {
+                alert("창 수량 저장 실패: " + err.message);
+            }
+        }
+
+        // 4. 유저 목록 불러오기
+        async function loadUsers() {
+            try {
+                const res = await fetch(`${DB_URL}.json`);
+                const data = await res.json();
+                const tbody = document.getElementById("userTableBody");
+                tbody.innerHTML = "";
+
+                if (!data) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">등록된 낚시 유저가 없습니다.</td></tr>`;
+                    return;
+                }
+
+                const userList = Object.entries(data).filter(([_, info]) => typeof info === 'object' && info !== null);
+                if (userList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">등록된 낚시 유저가 없습니다.</td></tr>`;
+                    return;
+                }
+
+                userList.sort((a, b) => {
+                    const orderA = typeof a[1]["sortOrder"] === 'number' ? a[1]["sortOrder"] : 99999;
+                    const orderB = typeof b[1]["sortOrder"] === 'number' ? b[1]["sortOrder"] : 99999;
+                    return orderA - orderB;
+                });
+
+                for (const [name, info] of userList) {
+                    let serialList = [];
+                    for (const [key, val] of Object.entries(info)) {
+                        if (key.includes("등록") && typeof val === "string") {
+                            serialList.push(val);
+                        }
+                    }
+                    const serialStr = serialList.join("<br>") || "-";
+                    const version = info["사용버전"] || "-";
+                    const status = info["상태"] || "";
+                    const userMaxSlots = (info["최대창수"] !== undefined && info["최대창수"] !== null) ? info["최대창수"] : "";
+
+                    let statusHtml = `<span class="badge-ok">정상</span>`;
+                    if (status.toLowerCase() === "x" || status === "차단") {
+                        statusHtml = `<span class="badge-del">자폭대기</span>`;
+                    } else if (status === "삭제완료") {
+                        statusHtml = `<span class="badge-del" style="background:#8e44ad;">삭제완료</span>`;
+                    }
+
+                    const runState = info["프로그램상태"] || "꺼짐";
+                    const runHtml = (runState === "켜짐")
+                        ? `<span class="badge-ok" style="background:#27ae60;">● 켜짐</span>`
+                        : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
+
+                    const tr = document.createElement("tr");
+                    tr.className = "draggable-row";
+                    tr.draggable = true;
+                    tr.dataset.name = name;
+
+                    tr.innerHTML = `
+                        <td><b>${name}</b></td>
+                        <td style="font-family: Consolas; font-size: 13px;">${serialStr}</td>
+                        <td style="text-align: center;">
+                            <input type="number" id="slotInput_${name}" min="1" max="10" value="${userMaxSlots}" placeholder="기본" style="width:58px; padding:4px; text-align:center;">
+                            <button class="btn-slot-save" onclick="saveUserMaxSlots('${name}')">저장</button>
+                        </td>
+                        <td style="text-align: center;">${version}</td>
+                        <td style="text-align: center;">${runHtml}</td>
+                        <td style="text-align: center;">${statusHtml}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-ban" onclick="changeStatus('${name}', 'x')">자폭</button>
+                            <button class="btn-normal" onclick="changeStatus('${name}', '')">정상</button>
+                            <button class="btn-del" onclick="deleteUser('${name}')">삭제</button>
+                        </td>
+                    `;
+
+                    addDragEvents(tr);
+                    tbody.appendChild(tr);
+                }
+            } catch (err) {
+                alert("데이터 로드 실패: " + err.message);
+            }
+        }
+
+        // 5. 드래그 앤 드롭 순서 변경
+        function addDragEvents(row) {
+            row.addEventListener("dragstart", (e) => {
+                draggedRow = row;
+                row.classList.add("dragging");
+                e.dataTransfer.effectAllowed = "move";
+            });
+            row.addEventListener("dragend", () => {
+                row.classList.remove("dragging");
+                document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+                saveRowOrder();
+            });
+            row.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (e.currentTarget !== draggedRow) e.currentTarget.classList.add("drag-over");
+            });
+            row.addEventListener("dragleave", (e) => {
+                e.currentTarget.classList.remove("drag-over");
+            });
+            row.addEventListener("drop", (e) => {
+                e.preventDefault();
+                const targetRow = e.currentTarget;
+                targetRow.classList.remove("drag-over");
+                if (targetRow !== draggedRow) {
+                    const tbody = targetRow.parentNode;
+                    const allRows = Array.from(tbody.querySelectorAll("tr.draggable-row"));
+                    if (allRows.indexOf(draggedRow) < allRows.indexOf(targetRow)) {
+                        tbody.insertBefore(draggedRow, targetRow.nextSibling);
+                    } else {
+                        tbody.insertBefore(draggedRow, targetRow);
+                    }
+                }
+            });
+        }
+
+        async function saveRowOrder() {
+            const rows = document.getElementById("userTableBody").querySelectorAll("tr.draggable-row");
+            const promises = [];
+            rows.forEach((row, index) => {
+                const name = row.dataset.name;
+                if (!name) return;
+                promises.push(fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "sortOrder": index + 1 })
+                }));
+            });
+            try { await Promise.all(promises); } catch (err) { console.error(err); }
+        }
+
+        // 6. 신규 낚시 유저 등록
+        async function saveUser() {
+            const name = document.getElementById("addName").value.trim();
+            const serial = document.getElementById("addSerial").value.trim();
+            const maxSlotsRaw = document.getElementById("addMaxSlots").value.trim();
+
+            if (!name) {
+                alert("이름(폴더명)을 입력하세요.");
+                return;
+            }
+
+            let payload = { "상태": "", "sortOrder": 99999 };
+            if (serial) payload["a등록"] = serial;
+            if (maxSlotsRaw !== "") {
+                const num = parseInt(maxSlotsRaw, 10);
+                if (isNaN(num) || num < 1 || num > 10) {
+                    alert("창수량은 1 ~ 10 사이의 숫자만 입력 가능합니다.");
+                    return;
+                }
+                payload["최대창수"] = num;
+            }
+
+            try {
+                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                alert(`${name} 등록이 완료되었습니다.`);
+                document.getElementById("addName").value = "";
+                document.getElementById("addSerial").value = "";
+                document.getElementById("addMaxSlots").value = "";
+                loadUsers();
+            } catch (err) {
+                alert("저장 실패: " + err.message);
+            }
+        }
+
+        // 7. 상태 변경 (자폭 / 정상)
+        async function changeStatus(name, newStatus) {
+            try {
+                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "상태": newStatus })
+                });
+                loadUsers();
+            } catch (err) {
+                alert("상태 변경 실패: " + err.message);
+            }
+        }
+
+        // 8. 유저 삭제
+        async function deleteUser(name) {
+            if (!confirm(`정말 [${name}] 유저를 완전히 삭제하시겠습니까?`)) return;
+            try {
+                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, { method: 'DELETE' });
+                loadUsers();
+            } catch (err) {
+                alert("삭제 실패: " + err.message);
+            }
+        }
+
+        // 페이지 열릴 때 자동 불러오기
+        loadGlobalMaxSlots();
+        loadUsers();
+    </script>
+</body>
+</html>
