@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- 모바일 화면 크기에 맞게 자동 비율 조정 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>낚시도우미 인증 관리</title>
+    <title>낚시 & 미니헬퍼 인증 관리</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -20,6 +20,31 @@
             text-align: center;
             font-size: 20px;
         }
+
+        /* 상단 탭 버튼 스타일 (왼쪽: 낚시 / 오른쪽: 미니헬퍼) */
+        .tab-bar {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #bdc3c7;
+            color: #2c3e50;
+            transition: background-color 0.2s;
+        }
+        .tab-btn.active {
+            background-color: #2c3e50;
+            color: white;
+        }
+
         .fishing-config-box {
             background: #eaf4fc;
             border: 1px solid #b8daff;
@@ -128,21 +153,28 @@
 </head>
 <body>
 
-    <h2>🎣 낚시도우미 인증 관리</h2>
+    <h2 id="pageTitle">🎣 낚시도우미 인증 관리</h2>
 
-    <!-- 전체 기본 최대 창 수량 설정 (1~10, 기본값 2) -->
-    <div class="fishing-config-box">
+    <!-- 상단 탭 전환 바 (왼쪽: 낚시 / 오른쪽: 미니헬퍼) -->
+    <div class="tab-bar">
+        <button id="tabFishingBtn" class="tab-btn active" onclick="switchTab('fishing')">🎣 낚시 관리</button>
+        <button id="tabMiniBtn" class="tab-btn" onclick="switchTab('mini')">⚔️ 미니헬퍼 관리</button>
+    </div>
+
+    <!-- 낚시 탭 전용: 전체 기본 최대 창 수량 설정 (1~10, 기본값 2) -->
+    <div id="fishingConfigBox" class="fishing-config-box">
         <span style="font-weight:bold; color:#2c3e50;">🎣 전체 기본 최대 창 등록 수량 (1~10):</span>
         <input type="number" id="globalMaxSlots" min="1" max="10" value="2" style="width: 75px; text-align: center; font-weight: bold;">
         <button onclick="saveGlobalMaxSlots()">💾 기본 수량 저장</button>
     </div>
 
-    <!-- 신규 유저 등록 패널 -->
+    <!-- 신규 유저 등록 패널 (기간 입력칸 제거) -->
     <div class="control-box">
         <input type="text" id="addName" placeholder="이름 (예: 집컴-1)">
         <input type="text" id="addSerial" placeholder="고유번호 (F-NEW-...)">
+        <!-- 낚시 탭일 때만 창수량 입력칸 표시 -->
         <input type="number" id="addMaxSlots" min="1" max="10" placeholder="창수량(1~10)" style="width:115px;">
-        <button onclick="saveUser()">➕ 낚시 등록</button>
+        <button id="saveUserBtn" onclick="saveUser()">➕ 낚시 등록</button>
         <button class="btn-refresh" onclick="loadUsers()">🔄 새로고침</button>
     </div>
 
@@ -153,7 +185,8 @@
                 <tr>
                     <th style="width: 130px;">이름(사용자명)</th>
                     <th>등록번호 (HWID)</th>
-                    <th style="width: 130px; text-align: center;">창수량 (1~10)</th>
+                    <!-- 낚시 탭 전용 컬럼 -->
+                    <th id="thMaxSlots" style="width: 130px; text-align: center;">창수량 (1~10)</th>
                     <th style="width: 70px; text-align: center;">버전</th>
                     <th style="width: 80px; text-align: center;">구동</th>
                     <th style="width: 90px; text-align: center;">상태</th>
@@ -167,13 +200,46 @@
     </div>
 
     <script>
-        // 낚시도우미 전용 파이어베이스 DB 주소
-        const BASE_URL = "https://zzmetin-fishing-default-rtdb.asia-southeast1.firebasedatabase.app";
-        const DB_URL = `${BASE_URL}/users`;
-        const FISHING_CFG_URL = `${BASE_URL}/fishing_config`;
+        // 낚시도우미 & 미니헬퍼 전용 파이어베이스 DB 주소
+        const FISHING_BASE_URL = "https://zzmetin-fishing-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const MINI_BASE_URL = "https://helper-zzmetin-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const FISHING_CFG_URL = `${FISHING_BASE_URL}/fishing_config`;
+
+        let currentTab = "fishing"; // 기본 탭: 낚시 ('fishing' 또는 'mini')
         let draggedRow = null;
 
-        // 1. 전체 기본 창 수량 불러오기
+        // 현재 탭에 맞는 파이어베이스 users 경로 반환
+        function getActiveUsersUrl() {
+            return (currentTab === "mini") ? `${MINI_BASE_URL}/users` : `${FISHING_BASE_URL}/users`;
+        }
+
+        // 탭 전환 함수 (낚시 <-> 미니헬퍼)
+        function switchTab(tab) {
+            currentTab = tab;
+
+            // 탭 버튼 활성화 상태 변경
+            document.getElementById("tabFishingBtn").classList.toggle("active", tab === "fishing");
+            document.getElementById("tabMiniBtn").classList.toggle("active", tab === "mini");
+
+            const isFishing = (tab === "fishing");
+
+            // 상단 제목 및 입력 UI 전환
+            document.getElementById("pageTitle").textContent = isFishing ? "🎣 낚시도우미 인증 관리" : "⚔️ 메틴1 미니헬퍼 인증 관리";
+            document.getElementById("addSerial").placeholder = isFishing ? "고유번호 (F-NEW-...)" : "고유번호 (PC-NEW-...)";
+            document.getElementById("saveUserBtn").textContent = isFishing ? "➕ 낚시 등록" : "➕ 미니헬퍼 등록";
+
+            // 낚시 전용 설정 박스 및 창수량 컬럼 표시/숨김
+            document.getElementById("fishingConfigBox").style.display = isFishing ? "flex" : "none";
+            document.getElementById("addMaxSlots").style.display = isFishing ? "inline-block" : "none";
+            document.getElementById("thMaxSlots").style.display = isFishing ? "table-cell" : "none";
+
+            if (isFishing) {
+                loadGlobalMaxSlots();
+            }
+            loadUsers();
+        }
+
+        // 1. 낚시 전체 기본 창 수량 불러오기
         async function loadGlobalMaxSlots() {
             try {
                 const res = await fetch(`${FISHING_CFG_URL}/max_slots.json`);
@@ -184,7 +250,7 @@
             }
         }
 
-        // 2. 전체 기본 창 수량 저장 (1~10)
+        // 2. 낚시 전체 기본 창 수량 저장 (1~10)
         async function saveGlobalMaxSlots() {
             const count = parseInt(document.getElementById("globalMaxSlots").value, 10);
             if (isNaN(count) || count < 1 || count > 10) {
@@ -203,7 +269,7 @@
             }
         }
 
-        // 3. 특정 유저의 개별 창 수량 저장
+        // 3. 특정 낚시 유저의 개별 창 수량 저장
         async function saveUserMaxSlots(name) {
             const inputEl = document.getElementById(`slotInput_${name}`);
             if (!inputEl) return;
@@ -220,7 +286,7 @@
             }
 
             try {
-                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                await fetch(`${FISHING_BASE_URL}/users/${encodeURIComponent(name)}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ "최대창수": valToSave })
@@ -231,22 +297,26 @@
             }
         }
 
-        // 4. 유저 목록 불러오기
+        // 4. 현재 탭의 유저 목록 불러오기
         async function loadUsers() {
             try {
-                const res = await fetch(`${DB_URL}.json`);
+                const res = await fetch(`${getActiveUsersUrl()}.json`);
                 const data = await res.json();
                 const tbody = document.getElementById("userTableBody");
                 tbody.innerHTML = "";
 
+                const isFishing = (currentTab === "fishing");
+                const emptyMsg = isFishing ? "등록된 낚시 유저가 없습니다." : "등록된 미니헬퍼 유저가 없습니다.";
+                const colSpan = isFishing ? 7 : 6;
+
                 if (!data) {
-                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">등록된 낚시 유저가 없습니다.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 20px;">${emptyMsg}</td></tr>`;
                     return;
                 }
 
                 const userList = Object.entries(data).filter(([_, info]) => typeof info === 'object' && info !== null);
                 if (userList.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">등록된 낚시 유저가 없습니다.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 20px;">${emptyMsg}</td></tr>`;
                     return;
                 }
 
@@ -280,6 +350,14 @@
                         ? `<span class="badge-ok" style="background:#27ae60;">● 켜짐</span>`
                         : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
 
+                    // 낚시 탭일 때만 창수량 칸 표시
+                    const slotTdHtml = isFishing
+                        ? `<td style="text-align: center;">
+                               <input type="number" id="slotInput_${name}" min="1" max="10" value="${userMaxSlots}" placeholder="기본" style="width:58px; padding:4px; text-align:center;">
+                               <button class="btn-slot-save" onclick="saveUserMaxSlots('${name}')">저장</button>
+                           </td>`
+                        : "";
+
                     const tr = document.createElement("tr");
                     tr.className = "draggable-row";
                     tr.draggable = true;
@@ -288,10 +366,7 @@
                     tr.innerHTML = `
                         <td><b>${name}</b></td>
                         <td style="font-family: Consolas; font-size: 13px;">${serialStr}</td>
-                        <td style="text-align: center;">
-                            <input type="number" id="slotInput_${name}" min="1" max="10" value="${userMaxSlots}" placeholder="기본" style="width:58px; padding:4px; text-align:center;">
-                            <button class="btn-slot-save" onclick="saveUserMaxSlots('${name}')">저장</button>
-                        </td>
+                        ${slotTdHtml}
                         <td style="text-align: center;">${version}</td>
                         <td style="text-align: center;">${runHtml}</td>
                         <td style="text-align: center;">${statusHtml}</td>
@@ -348,11 +423,12 @@
 
         async function saveRowOrder() {
             const rows = document.getElementById("userTableBody").querySelectorAll("tr.draggable-row");
+            const activeUrl = getActiveUsersUrl();
             const promises = [];
             rows.forEach((row, index) => {
                 const name = row.dataset.name;
                 if (!name) return;
-                promises.push(fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                promises.push(fetch(`${activeUrl}/${encodeURIComponent(name)}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ "sortOrder": index + 1 })
@@ -361,7 +437,7 @@
             try { await Promise.all(promises); } catch (err) { console.error(err); }
         }
 
-        // 6. 신규 낚시 유저 등록
+        // 6. 신규 유저 등록 (기간 없이 등록)
         async function saveUser() {
             const name = document.getElementById("addName").value.trim();
             const serial = document.getElementById("addSerial").value.trim();
@@ -374,7 +450,8 @@
 
             let payload = { "상태": "", "sortOrder": 99999 };
             if (serial) payload["a등록"] = serial;
-            if (maxSlotsRaw !== "") {
+
+            if (currentTab === "fishing" && maxSlotsRaw !== "") {
                 const num = parseInt(maxSlotsRaw, 10);
                 if (isNaN(num) || num < 1 || num > 10) {
                     alert("창수량은 1 ~ 10 사이의 숫자만 입력 가능합니다.");
@@ -384,7 +461,7 @@
             }
 
             try {
-                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                await fetch(`${getActiveUsersUrl()}/${encodeURIComponent(name)}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -402,7 +479,7 @@
         // 7. 상태 변경 (자폭 / 정상)
         async function changeStatus(name, newStatus) {
             try {
-                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, {
+                await fetch(`${getActiveUsersUrl()}/${encodeURIComponent(name)}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ "상태": newStatus })
@@ -417,14 +494,14 @@
         async function deleteUser(name) {
             if (!confirm(`정말 [${name}] 유저를 완전히 삭제하시겠습니까?`)) return;
             try {
-                await fetch(`${DB_URL}/${encodeURIComponent(name)}.json`, { method: 'DELETE' });
+                await fetch(`${getActiveUsersUrl()}/${encodeURIComponent(name)}.json`, { method: 'DELETE' });
                 loadUsers();
             } catch (err) {
                 alert("삭제 실패: " + err.message);
             }
         }
 
-        // 페이지 열릴 때 자동 불러오기
+        // 페이지 열릴 때 기본 탭(낚시) 불러오기
         loadGlobalMaxSlots();
         loadUsers();
     </script>
