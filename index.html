@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- 모바일 화면 크기에 맞게 자동 비율 조정 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>낚시 & 미니헬퍼 인증 관리</title>
+    <title>낚시 & 헬퍼 인증 관리</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -21,7 +21,7 @@
             font-size: 20px;
         }
 
-        /* 상단 탭 버튼 스타일 (왼쪽: 낚시 / 오른쪽: 미니헬퍼) */
+        /* 상단 탭 버튼 스타일 (왼쪽: 낚시 / 오른쪽: 헬퍼) */
         .tab-bar {
             display: flex;
             justify-content: center;
@@ -155,10 +155,10 @@
 
     <h2 id="pageTitle">🎣 낚시도우미 인증 관리</h2>
 
-    <!-- 상단 탭 전환 바 (왼쪽: 낚시 / 오른쪽: 미니헬퍼) -->
+    <!-- 상단 탭 전환 바 (왼쪽: 낚시 / 오른쪽: 헬퍼) -->
     <div class="tab-bar">
         <button id="tabFishingBtn" class="tab-btn active" onclick="switchTab('fishing')">🎣 낚시 관리</button>
-        <button id="tabMiniBtn" class="tab-btn" onclick="switchTab('mini')">⚔️ 미니헬퍼 관리</button>
+        <button id="tabMiniBtn" class="tab-btn" onclick="switchTab('mini')">⚔️ 헬퍼 관리</button>
     </div>
 
     <!-- 낚시 탭 전용: 전체 기본 최대 창 수량 설정 (1~10, 기본값 2) -->
@@ -200,7 +200,7 @@
     </div>
 
     <script>
-        // 낚시도우미 & 미니헬퍼 전용 파이어베이스 DB 주소
+        // 낚시도우미 & 헬퍼 전용 파이어베이스 DB 주소
         const FISHING_BASE_URL = "https://zzmetin-fishing-default-rtdb.asia-southeast1.firebasedatabase.app";
         const MINI_BASE_URL = "https://helper-zzmetin-default-rtdb.asia-southeast1.firebasedatabase.app";
         const FISHING_CFG_URL = `${FISHING_BASE_URL}/fishing_config`;
@@ -213,7 +213,7 @@
             return (currentTab === "mini") ? `${MINI_BASE_URL}/users` : `${FISHING_BASE_URL}/users`;
         }
 
-        // 탭 전환 함수 (낚시 <-> 미니헬퍼)
+        // 탭 전환 함수 (낚시 <-> 헬퍼)
         function switchTab(tab) {
             currentTab = tab;
 
@@ -224,9 +224,9 @@
             const isFishing = (tab === "fishing");
 
             // 상단 제목 및 입력 UI 전환
-            document.getElementById("pageTitle").textContent = isFishing ? "🎣 낚시도우미 인증 관리" : "⚔️ 메틴1 미니헬퍼 인증 관리";
+            document.getElementById("pageTitle").textContent = isFishing ? "🎣 낚시도우미 인증 관리" : "⚔️ 메틴1 헬퍼 인증 관리";
             document.getElementById("addSerial").placeholder = isFishing ? "고유번호 (F-NEW-...)" : "고유번호 (PC-NEW-...)";
-            document.getElementById("saveUserBtn").textContent = isFishing ? "➕ 낚시 등록" : "➕ 미니헬퍼 등록";
+            document.getElementById("saveUserBtn").textContent = isFishing ? "➕ 낚시 등록" : "➕ 헬퍼 등록";
 
             // 낚시 전용 설정 박스 및 창수량 컬럼 표시/숨김
             document.getElementById("fishingConfigBox").style.display = isFishing ? "flex" : "none";
@@ -306,7 +306,7 @@
                 tbody.innerHTML = "";
 
                 const isFishing = (currentTab === "fishing");
-                const emptyMsg = isFishing ? "등록된 낚시 유저가 없습니다." : "등록된 미니헬퍼 유저가 없습니다.";
+                const emptyMsg = isFishing ? "등록된 낚시 유저가 없습니다." : "등록된 헬퍼 유저가 없습니다.";
                 const colSpan = isFishing ? 7 : 6;
 
                 if (!data) {
