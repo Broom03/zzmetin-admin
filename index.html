@@ -149,6 +149,48 @@
                 font-size: 14px;
             }
         }
+
+/* 멍구 기록 보기 팝업 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-box {
+            background: white;
+            width: 90%;
+            max-width: 380px;
+            max-height: 75vh;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .modal-list {
+            overflow-y: auto;
+            margin: 10px 0;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .modal-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 8px;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 13px;
+        }
+        .btn-history {
+            background-color: #7f8c8d;
+            padding: 2px 6px;
+            font-size: 11px;
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
@@ -200,6 +242,14 @@
             </tbody>
         </table>
     </div>
+<!-- 멍구 최근 20개 기록 보기 팝업 -->
+    <div id="mungguModal" class="modal-overlay" onclick="if(event.target === this) closeMungguModal()">
+        <div class="modal-box">
+            <h3 id="mungguModalTitle" style="margin:0; font-size:16px; color:#2c3e50;">멍구 사용 기록</h3>
+            <div id="mungguModalList" class="modal-list"></div>
+            <button onclick="closeMungguModal()" style="background:#34495e; width:100%;">닫기</button>
+        </div>
+    </div>
 
     <script>
         // zzmetin 낚시 & zzmetin 헬퍼 전용 파이어베이스 DB 주소
@@ -209,6 +259,7 @@
 
         let currentTab = "fishing"; // 기본 탭: 낚시 ('fishing' 또는 'mini')
         let draggedRow = null;
+	let mungguHistoryMap = {};  // 유저별 멍구 최근 20개 기록 임시 저장소
 
         // 현재 탭에 맞는 파이어베이스 users 경로 반환
         function getActiveUsersUrl() {
@@ -354,10 +405,16 @@
                     // 🎯 헬퍼 탭일 때만 멍구 상태 배지 생성
                     let mungguTdHtml = "";
                     if (!isFishing) {
-                        const mungguState = info["멍구상태"] || "꺼짐";
-                        const mungguHtml = mungguState.startsWith("켜짐")
-                            ? `<span class="badge-del" style="background:#e67e22;">● 켜짐</span>`
-                            : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
+			// 유저별 최근 30개 기록을 메모리에 저장
+                    mungguHistoryMap[name] = Array.isArray(info["멍구기록"]) ? info["멍구기록"] : [];
+
+                    const mungguState = info["멍구상태"] || "꺼짐";
+                    const mungguBadge = mungguState.startsWith("켜짐")
+                        ? `<span class="badge-del" style="background:#e67e22;">● 켜짐</span>`
+                        : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
+
+                    // 멍구 배지 옆에 [기록] 버튼 추가
+                    const mungguHtml = `${mungguBadge}<button class="btn-history" onclick="openMungguModal('${name}')">기록</button>`;
                         mungguTdHtml = `<td style="text-align: center;">${mungguHtml}</td>`;
                     }
 
@@ -521,6 +578,33 @@
         // 페이지 열릴 때 기본 탭(낚시) 불러오기
         loadGlobalMaxSlots();
         loadUsers();
+// 멍구 최근 30개 기록 팝업 열기 (최신 내역이 맨 위에 오도록 역순 출력)
+        function openMungguModal(name) {
+            const list = mungguHistoryMap[name] || [];
+            document.getElementById("mungguModalTitle").textContent = `[${name}] 멍구 최근 기록 (${list.length}개)`;
+            const listEl = document.getElementById("mungguModalList");
+
+            if (list.length === 0) {
+                listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#7f8c8d;">기록된 내역이 없습니다.</div>`;
+            } else {
+                // 최근 기록이 맨 위에 보이도록 뒤집어서 출력
+                listEl.innerHTML = [...list].reverse().map((item, idx) => {
+                    const isOn = String(item["상태"] || "").startsWith("켜짐");
+                    const badge = isOn
+                        ? `<span class="badge-del" style="background:#e67e22;">● 켜짐</span>`
+                        : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
+                    return `<div class="modal-item">
+                                <span>${idx + 1}. ${item["시간"] || "-"}</span>
+                                ${badge}
+                            </div>`;
+                }).join("");
+            }
+            document.getElementById("mungguModal").style.display = "flex";
+        }
+
+        function closeMungguModal() {
+            document.getElementById("mungguModal").style.display = "none";
+        }
     </script>
 </body>
 </html>
