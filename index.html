@@ -587,15 +587,10 @@
             if (list.length === 0) {
                 listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#7f8c8d;">기록된 내역이 없습니다.</div>`;
             } else {
-                // 최근 기록이 맨 위에 보이도록 뒤집어서 출력
+                // 🎯 켜짐/꺼짐 배지를 제거하고 순번과 날짜·시간만 깔끔하게 출력
                 listEl.innerHTML = [...list].reverse().map((item, idx) => {
-                    const isOn = String(item["상태"] || "").startsWith("켜짐");
-                    const badge = isOn
-                        ? `<span class="badge-del" style="background:#e67e22;">● 켜짐</span>`
-                        : `<span class="badge-del" style="background:#95a5a6;">○ 꺼짐</span>`;
                     return `<div class="modal-item">
                                 <span>${idx + 1}. ${item["시간"] || "-"}</span>
-                                ${badge}
                             </div>`;
                 }).join("");
             }
