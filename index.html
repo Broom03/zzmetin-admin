@@ -203,14 +203,7 @@
         <button id="tabMiniBtn" class="tab-btn" onclick="switchTab('mini')">⚔️ 헬퍼 관리</button>
     </div>
 
-    <!-- 낚시 탭 전용: 전체 기본 최대 창 수량 설정 (1~10, 기본값 2) -->
-    <div id="fishingConfigBox" class="fishing-config-box">
-        <span style="font-weight:bold; color:#2c3e50;">🎣 전체 기본 최대 창 등록 수량 (1~10):</span>
-        <input type="number" id="globalMaxSlots" min="1" max="10" value="2" style="width: 75px; text-align: center; font-weight: bold;">
-        <button onclick="saveGlobalMaxSlots()">💾 기본 수량 저장</button>
-    </div>
-
-    <!-- 신규 유저 등록 패널 (기간 입력칸 제거) -->
+<!-- 신규 유저 등록 패널 (기간 입력칸 제거) -->
     <div class="control-box">
         <input type="text" id="addName" placeholder="이름 (예: 집컴-1)">
         <input type="text" id="addSerial" placeholder="고유번호 (F-NEW-...)">
@@ -255,7 +248,6 @@
         // zzmetin 낚시 & zzmetin 헬퍼 전용 파이어베이스 DB 주소
         const FISHING_BASE_URL = "https://zzmetin-fishing-default-rtdb.asia-southeast1.firebasedatabase.app";
         const MINI_BASE_URL = "https://helper-zzmetin-default-rtdb.asia-southeast1.firebasedatabase.app";
-        const FISHING_CFG_URL = `${FISHING_BASE_URL}/fishing_config`;
 
         let currentTab = "fishing"; // 기본 탭: 낚시 ('fishing' 또는 'mini')
         let draggedRow = null;
@@ -282,47 +274,12 @@
             document.getElementById("saveUserBtn").textContent = isFishing ? "➕ 낚시 등록" : "➕ 헬퍼 등록";
 
             // 낚시 전용 설정 박스 및 창수량 컬럼 표시/숨김
-            document.getElementById("fishingConfigBox").style.display = isFishing ? "flex" : "none";
             document.getElementById("addMaxSlots").style.display = isFishing ? "inline-block" : "none";
             document.getElementById("thMaxSlots").style.display = isFishing ? "table-cell" : "none";
             
             // 헬퍼 탭일 때만 멍구 컬럼 표시
             document.getElementById("thMunggu").style.display = isFishing ? "none" : "table-cell";
-
-            if (isFishing) {
-                loadGlobalMaxSlots();
-            }
             loadUsers();
-        }
-
-        // 1. 낚시 전체 기본 창 수량 불러오기
-        async function loadGlobalMaxSlots() {
-            try {
-                const res = await fetch(`${FISHING_CFG_URL}/max_slots.json`);
-                const val = await res.json();
-                document.getElementById("globalMaxSlots").value = (val !== null && val !== undefined) ? val : 2;
-            } catch (err) {
-                console.error("기본 창 수량 로드 실패:", err);
-            }
-        }
-
-        // 2. 낚시 전체 기본 창 수량 저장 (1~10)
-        async function saveGlobalMaxSlots() {
-            const count = parseInt(document.getElementById("globalMaxSlots").value, 10);
-            if (isNaN(count) || count < 1 || count > 10) {
-                alert("1 ~ 10 사이의 숫자를 입력해주세요.");
-                return;
-            }
-            try {
-                await fetch(`${FISHING_CFG_URL}.json`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "max_slots": count })
-                });
-                alert(`기본 최대 창 수량이 ${count}개로 저장되었습니다.`);
-            } catch (err) {
-                alert("저장 실패: " + err.message);
-            }
         }
 
         // 3. 특정 낚시 유저의 개별 창 수량 저장
@@ -576,7 +533,6 @@
         }
 
         // 페이지 열릴 때 기본 탭(낚시) 불러오기
-        loadGlobalMaxSlots();
         loadUsers();
 // 멍구 최근 30개 기록 팝업 열기 (최신 내역이 맨 위에 오도록 역순 출력)
         function openMungguModal(name) {
