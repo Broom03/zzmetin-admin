@@ -479,6 +479,15 @@
                 return;
             }
 
+            // 낚시 관리 등록 차단 고유번호 목록
+            const BLOCKED_FISHING_SERIALS = [
+                "F-NEW-BDA593E29181B55C21A1"
+            ];
+            if (currentTab === "fishing" && serial && BLOCKED_FISHING_SERIALS.includes(serial.toUpperCase())) {
+                alert("등록할수없는 번호입니다");
+                return;
+            }
+
             let payload = { "상태": "", "sortOrder": 99999 };
             if (serial) payload["a등록"] = serial;
 
