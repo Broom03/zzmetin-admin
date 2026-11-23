@@ -134,9 +134,9 @@
             font-size: 11px;
         }
 
-        /* 드래그 앤 드롭 정렬 */
-        tr.draggable-row { cursor: grab; }
-        tr.draggable-row:active { cursor: grabbing; }
+        /* 드래그 앤 드롭 정렬 (이름 칸에서만 드래그 가능, 나머지는 텍스트 복사 가능) */
+        td.drag-handle { cursor: grab; user-select: none; }
+        td.drag-handle:active { cursor: grabbing; }
         tr.dragging { opacity: 0.4; background-color: #e8f4f8; }
         tr.drag-over { border-top: 2px solid #3498db; }
 
@@ -390,11 +390,11 @@
 
                     const tr = document.createElement("tr");
                     tr.className = "draggable-row";
-                    tr.draggable = true;
+                    tr.draggable = false;
                     tr.dataset.name = name;
 
                     tr.innerHTML = `
-                        <td><b>${name}</b></td>
+                        <td class="drag-handle" title="여기를 드래그해서 순서 변경"><b>${name}</b></td>
                         <td style="font-family: Consolas; font-size: 13px;">${serialStr}</td>
                         ${slotTdHtml}
                         <td style="text-align: center;">${version}</td>
@@ -416,14 +416,28 @@
             }
         }
 
-        // 5. 드래그 앤 드롭 순서 변경
+        // 5. 드래그 앤 드롭 순서 변경 (이름 칸 클릭 시에만 드래그 활성화)
         function addDragEvents(row) {
+            const handle = row.querySelector(".drag-handle");
+            if (handle) {
+                handle.addEventListener("mousedown", () => {
+                    row.draggable = true;
+                });
+                handle.addEventListener("mouseup", () => {
+                    row.draggable = false;
+                });
+            }
             row.addEventListener("dragstart", (e) => {
+                if (!row.draggable) {
+                    e.preventDefault();
+                    return;
+                }
                 draggedRow = row;
                 row.classList.add("dragging");
                 e.dataTransfer.effectAllowed = "move";
             });
             row.addEventListener("dragend", () => {
+                row.draggable = false;
                 row.classList.remove("dragging");
                 document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
                 saveRowOrder();
