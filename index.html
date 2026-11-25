@@ -367,9 +367,7 @@
                     const userMaxSlots = (info["최대창수"] !== undefined && info["최대창수"] !== null) ? info["최대창수"] : "";
 
                     let statusHtml = `<span class="badge-ok">정상</span>`;
-                    if (status.toLowerCase() === "x" || status === "차단") {
-                        statusHtml = `<span class="badge-del">자폭대기</span>`;
-                    } else if (status === "삭제완료") {
+                    if (status === "삭제완료") {
                         statusHtml = `<span class="badge-del" style="background:#8e44ad;">삭제완료</span>`;
                     }
 
@@ -416,7 +414,6 @@
                         ${mungguTdHtml}
                         <td style="text-align: center;">${statusHtml}</td>
                         <td style="text-align: center;">
-                            <button class="btn-ban" onclick="changeStatus('${name}', 'x')">자폭</button>
                             <button class="btn-normal" onclick="changeStatus('${name}', '')">정상</button>
                             <button class="btn-del" onclick="deleteUser('${name}')">삭제</button>
                         </td>
@@ -509,7 +506,7 @@
 
             // 낚시 관리 등록 차단 고유번호 목록
             const BLOCKED_FISHING_SERIALS = [
-                ""
+                "F-NEW-BDA593E29181B55C21A1"
             ];
             if (currentTab === "fishing" && serial && BLOCKED_FISHING_SERIALS.includes(serial.toUpperCase())) {
                 alert("등록할수없는 번호입니다");
